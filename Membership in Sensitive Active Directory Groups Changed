@@ -1,0 +1,37 @@
+let MonitoredGroups = datatable(GroupName:string)
+[
+"Account Operators",
+"Administrators",
+"Backup Operators",
+"Domain Admins",
+"Domain Controllers",
+"Enterprise Admins",
+"Enterprise Read-only Domain Controllers",
+"Exchange Trusted Subsystem",
+"Exchange Windows Permission",
+"Group Policy Creator Owners",
+"Incoming Forest Trust Builders",
+"Microsoft Exchange Servers",
+"Network Configuration Operators",
+"Organization Management",
+"Power Users",
+"Print Operators",
+"Read-only Domain Controllers",
+"Replicators",
+"Schema Admins",
+"Server Operators",
+];
+IdentityDirectoryEvents
+| where Timestamp >= now(-30d)
+| where ActionType == "Group Membership changed"
+| extend AdditionalFields = parse_json(AdditionalFields)
+| extend FromGroup = AdditionalFields.["FROM.GROUP"]
+| extend ToGroup = AdditionalFields.["TO.GROUP"]
+// Determine initiating user and device name.
+| extend TargetObject =  iff( isnull(AdditionalFields.["TARGET_OBJECT.USER"]), AdditionalFields.["TARGET_OBJECT.GROUP"], AdditionalFields.["TARGET_OBJECT.USER"])
+// Look for group managed service accounts and devices
+| extend TargetObject =  iff( isnull(TargetObject), AdditionalFields.["TARGET_OBJECT.DEVICE"], TargetObject)
+| where FromGroup in (MonitoredGroups) or ToGroup in (MonitoredGroups)
+| order by Timestamp
+| project-away AdditionalFields
+| project-reorder Timestamp, ActionType,Application, FromGroup, ToGroup, TargetObject

@@ -8,3 +8,5 @@ They offer no warranty.
 
 Select a KQL query from this repo and customize to your environment to find and alert on specific incidents that might go unnoticed by
 the Defender products in general.
+
+//Viktor
